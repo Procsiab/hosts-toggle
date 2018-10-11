@@ -13,8 +13,8 @@ _SCRIPT_VERSION=1.0
 # Check if the script was run by user root; exit otherwise
 function _fn_check_root {
 	if [ "$EUID" -ne 0 ]
-		then echo "[ERR]: Please run this script with 'sudo'!"
-		exit
+		then echo -e "[ERR]: Unable to write file $_HOSTS_FILE\n       Try to run this script as root!"
+		exit 1
 	fi
 }
 
@@ -22,13 +22,18 @@ function _fn_check_root {
 function _fn_backup {
 	if [ -f "$_HOSTS_FILE" ]
 	then
-		if [ $_SCRIPT_BACKUP -eq 1 ]
+		if [ -r $_HOSTS_FILE ]
 		then
-			_backup_name="$_HOSTS_FILE.bak-`date +%s%N | cut -b1-13`"
-			cp "$_HOSTS_FILE" "$_backup_name"
-			echo "[INFO]: Created backup file: $_backup_name"
+			if [ $_SCRIPT_BACKUP -eq 1 ]
+			then
+				_backup_name="$_HOSTS_FILE.bak-`date +%s%N | cut -b1-13`"
+				cp "$_HOSTS_FILE" "$_backup_name"
+				echo "[INFO]: Created backup file: $_backup_name"
+			else
+				echo "[INFO]: Backup skipped (asked by user)"
+			fi
 		else
-			echo "[INFO]: Backup skipped"
+			echo "[WARN]: Backup skipped (permission error)"
 		fi
 	else
 		echo "[WARN]: No hosts file found, so no back up was created!"
@@ -39,6 +44,11 @@ function _fn_backup {
 
 # Write the IP/Hostnames in the hosts file
 function _fn_write_hosts {
+	# Check if file is writable and if you run the script as root
+	if [ ! -w $_SCRIPT_BACKUP ]
+	then
+		_fn_check_root
+	fi
 	# Check if file has the pattern used by this script
 	( (cat "$_HOSTS_FILE" | grep "# Hosts-Toggle") && (cat "$_HOSTS_FILE" | grep "# Toggle-Hosts") ) 1> /dev/null 
 	ret=$?
@@ -49,11 +59,11 @@ function _fn_write_hosts {
 		echo "[INFO]: Wrote patterns to file hosts"
 	fi
 	# Clear pre-existing script-added hosts
-	sed -i.bak '/# Hosts-Toggle/,/# Toggle-Hosts/{//!d}' "$_HOSTS_FILE"
+	sed -i '/# Hosts-Toggle/,/# Toggle-Hosts/{//!d}' "$_HOSTS_FILE"
 	if [[ $_SCRIPT_SWITCH = "on"  ]]
 	then
 		# Insert hosts from settings file between the patterns
-		sed -i.bak '/# Hosts-Toggle/r settings.txt' "$_HOSTS_FILE"
+		sed -i '/# Hosts-Toggle/r settings.txt' "$_HOSTS_FILE"
 		echo "[INFO]: Added custom hosts to file"
 	elif [[ $_SCRIPT_SWITCH = "off"  ]]
 	then
@@ -65,7 +75,6 @@ function _fn_write_hosts {
 
 # Guide the user throughout the script, prompt for file problems
 function _fn_main {
-	_fn_check_root
 	echo "*********** HOSTS TOGGLE ***********"
 	echo "The hosts defined into settings.txt"
 	echo "file will be written to the hosts"
@@ -97,7 +106,7 @@ do
  		--no-bak) 
 			_SCRIPT_BACKUP=0;;
 		-h|--help)
-			echo "Usage: hosts-toggle (on|off) (-y) (--no-bak) (-s /path/to/settings.txt)"
+				echo "Usage: hosts-toggle (on|off) (-y) (--no-bak) (-s /path/to/settings.txt) (-f /path/to/hosts)"
 			exit 0;;
 		-v|--version)
 			echo "Script version: $_SCRIPT_VERSION"
@@ -106,6 +115,9 @@ do
 			_SCRIPT_SWITCH=$1;;
 		-s|--settings)
 			_SETTINGS_FILE=$2
+			shift;;
+		-f|--file)
+			_HOSTS_FILE=$2
 			shift;;
  		*) echo "[ERR]: Unknown parameter passed: $1"; exit 1;;
 	esac

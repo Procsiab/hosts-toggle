@@ -17,5 +17,10 @@ In this case the script will prompt the user with the steps to perform. More com
 - **-y**: skip the "are you sure" prompt;
 - **--no-bak**: skip the back up of the hosts file;
 - **-s | --settings <path>**: specify the absolute path to the `settings.txt` file to use;
+- **-f | --file <path>**: specify the path for the `hosts` file
 - **-v | --version**: prints the version number of the script;
 - **-h | --help**: prints the usage hint for the script.
+
+## Backup
+
+The script will backup the hosts file by default, by appending the Unix Epoch in milliseconds to the file name with the *.bak* extension; backups are stored in the same folder as the new `hosts` file
