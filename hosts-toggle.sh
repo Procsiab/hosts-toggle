@@ -47,8 +47,14 @@ function _fn_backup {
 			if [ $_SCRIPT_BACKUP -eq 1 ]
 			then
 				_backup_name="$_HOSTS_FILE.bak-`date +%s%N | cut -b1-13`"
-				cp "$_HOSTS_FILE" "$_backup_name"
-				_fn_echoverb 1 "Created backup file: $_backup_name"
+				cp "$_HOSTS_FILE" "$_backup_name" 2>/dev/null
+				ret=$?
+				if [ $ret -eq 0 ]
+				then
+					_fn_echoverb 1 "Created backup file: $_backup_name"
+				else
+					_fn_echoverb 2 "Backup skipped (permission error)"
+				fi
 			else
 				_fn_echoverb 1 "Backup skipped (asked by user)"
 			fi
@@ -74,8 +80,8 @@ function _fn_write_hosts {
 	ret=$?
 	if [ $ret -ne 0 ]
 	then
-		echo "# Hosts-Toggle" | (tee -a "$_HOSTS_FILE" 1> /dev/null)
-		echo "# Toggle-Hosts" | (tee -a "$_HOSTS_FILE" 1> /dev/null)
+		echo "# Hosts-Toggle" | (tee -a "$_HOSTS_FILE" 1>/dev/null)
+		echo "# Toggle-Hosts" | (tee -a "$_HOSTS_FILE" 1>/dev/null)
 		_fn_echoverb 1 "Wrote patterns to file hosts"
 	fi
 	# Clear pre-existing script-added hosts
@@ -91,7 +97,7 @@ function _fn_write_hosts {
 		_fn_echoverb 1 "Removed custom hosts from file"
 		_SCRIPT_RET=2
 	else
-		_fn_echoverb 3 "Wrong usage; you may call this script as hosts-toggle -s on|off (-y) (-f settings.txt)"
+		_fn_echoverb 3 "Wrong usage; you may call this script as hosts-toggle -h to get the available options"
 	fi
 }
 
@@ -112,7 +118,7 @@ function _fn_main {
 	then
 		_fn_backup
 		_fn_write_hosts	
-		echo
+		_fn_echoverb 0 ""
 		_fn_echoverb 0 "******** HOSTS FILE UPDATED ********"
 		_fn_echoverb 0 "You can find a backup file in the"
 		_fn_echoverb 0 "same folder, named hosts.bak-ETA"
@@ -150,7 +156,7 @@ do
 		-f|--file)
 			_HOSTS_FILE=$2
 			shift;;
- 		*) echo "[ERR]: Unknown parameter passed: $1"; exit 1;;
+ 		*) _fn_echoverb 3 "Unknown parameter passed: $1"; exit 1;;
 	esac
 	shift
 done
