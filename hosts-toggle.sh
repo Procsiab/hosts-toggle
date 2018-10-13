@@ -8,12 +8,32 @@ _SETTINGS_FILE="settings.txt"
 _SCRIPT_SWITCH=""
 _SCRIPT_YES=0
 _SCRIPT_BACKUP=1
-_SCRIPT_VERSION=1.0
+_SCRIPT_VERSION=1.1
+_SCRIPT_VERBOSE=0
+_SCRIPT_RET=0
+
+# Echo when verbose flag is passed
+function _fn_echoverb {
+	if [[ ( _SCRIPT_VERBOSE -eq 1 ) || ( $1 -eq 3 ) ]]
+	then
+		case $1 in
+			0)
+				_level="";;
+			1)
+				_level="[INFO]: ";;
+			2)
+				_level="[WARN]: ";;
+			*)
+				_level="[ERR]: ";;
+		esac
+		echo -e "$_level$2"
+	fi
+}
 
 # Check if the script was run by user root; exit otherwise
 function _fn_check_root {
 	if [ "$EUID" -ne 0 ]
-		then echo -e "[ERR]: Unable to write file $_HOSTS_FILE\n       Try to run this script as root!"
+		then _fn_echoverb 3 "Unable to write file $_HOSTS_FILE\n       Try to run this script as root!"
 		exit 1
 	fi
 }
@@ -28,17 +48,17 @@ function _fn_backup {
 			then
 				_backup_name="$_HOSTS_FILE.bak-`date +%s%N | cut -b1-13`"
 				cp "$_HOSTS_FILE" "$_backup_name"
-				echo "[INFO]: Created backup file: $_backup_name"
+				_fn_echoverb 1 "Created backup file: $_backup_name"
 			else
-				echo "[INFO]: Backup skipped (asked by user)"
+				_fn_echoverb 1 "Backup skipped (asked by user)"
 			fi
 		else
-			echo "[WARN]: Backup skipped (permission error)"
+			_fn_echoverb 2 "Backup skipped (permission error)"
 		fi
 	else
-		echo "[WARN]: No hosts file found, so no back up was created!"
+		_fn_echoverb 2 "No hosts file found, so no back up was created!"
 		touch "$_HOSTS_FILE"
-		echo "[INFO]: Created file hosts"
+		_fn_echoverb 1 "Created file hosts"
 	fi
 }
 
@@ -56,7 +76,7 @@ function _fn_write_hosts {
 	then
 		echo "# Hosts-Toggle" | (tee -a "$_HOSTS_FILE" 1> /dev/null)
 		echo "# Toggle-Hosts" | (tee -a "$_HOSTS_FILE" 1> /dev/null)
-		echo "[INFO]: Wrote patterns to file hosts"
+		_fn_echoverb 1 "Wrote patterns to file hosts"
 	fi
 	# Clear pre-existing script-added hosts
 	sed -i '/# Hosts-Toggle/,/# Toggle-Hosts/{//!d}' "$_HOSTS_FILE"
@@ -64,20 +84,22 @@ function _fn_write_hosts {
 	then
 		# Insert hosts from settings file between the patterns
 		sed -i '/# Hosts-Toggle/r settings.txt' "$_HOSTS_FILE"
-		echo "[INFO]: Added custom hosts to file"
+		_fn_echoverb 1 "Added custom hosts to file"
+		_SCRIPT_RET=1
 	elif [[ $_SCRIPT_SWITCH = "off"  ]]
 	then
-		echo "[INFO]: Removed custom hosts from file"
+		_fn_echoverb 1 "Removed custom hosts from file"
+		_SCRIPT_RET=2
 	else
-		echo "[ERR]: Wrong usage; you may call this script as hosts-toggle -s on|off (-y) (-f settings.txt)"
+		_fn_echoverb 3 "Wrong usage; you may call this script as hosts-toggle -s on|off (-y) (-f settings.txt)"
 	fi
 }
 
 # Guide the user throughout the script, prompt for file problems
 function _fn_main {
-	echo "*********** HOSTS TOGGLE ***********"
-	echo "The hosts defined into settings.txt"
-	echo "file will be written to the hosts"
+	_fn_echoverb 0 "*********** HOSTS TOGGLE ***********"
+	_fn_echoverb 0 "The hosts defined into settings.txt"
+	_fn_echoverb 0 "file will be written to the hosts"
 
 	if [[ $_SCRIPT_YES -ne 1 ]]
 	then
@@ -91,9 +113,16 @@ function _fn_main {
 		_fn_backup
 		_fn_write_hosts	
 		echo
-		echo "******** HOSTS FILE UPDATED ********"
-		echo "You can find a backup file in the"
-		echo "same folder, named hosts.bak-ETA"
+		_fn_echoverb 0 "******** HOSTS FILE UPDATED ********"
+		_fn_echoverb 0 "You can find a backup file in the"
+		_fn_echoverb 0 "same folder, named hosts.bak-ETA"
+		if [ $_SCRIPT_RET -eq 1 ]
+		then
+			echo "++++++++++++ TOGGLE  ON ++++++++++++"
+		elif [ $_SCRIPT_RET -eq 2 ]
+		then
+			echo "------------ TOGGLE OFF ------------"
+		fi
 	fi
 }
 
@@ -105,8 +134,10 @@ do
 			_SCRIPT_YES=1;;
  		--no-bak) 
 			_SCRIPT_BACKUP=0;;
+		-l|--log)
+			_SCRIPT_VERBOSE=1;;
 		-h|--help)
-				echo "Usage: hosts-toggle (on|off) (-y) (--no-bak) (-s /path/to/settings.txt) (-f /path/to/hosts)"
+				echo "Usage: hosts-toggle (on|off) (-y) (-l) (--no-bak) (-s /path/to/settings.txt) (-f /path/to/hosts)"
 			exit 0;;
 		-v|--version)
 			echo "Script version: $_SCRIPT_VERSION"
