@@ -2,7 +2,7 @@
 
 This bash script allows you to *hot-swap* host records in the hosts file, from a text file.
 
-In practice, all the lines contaimned in the `settings.txt` file will be copied in the `/etc/hosts` file, between two patterns.
+In practice, all the lines contained in the `settings.txt` file will be copied in the `/etc/hosts` file, between two patterns.
 
 ## Dependencies
 
@@ -28,4 +28,4 @@ In this case the script will prompt the user with the steps to perform; note tha
 
 ## Backup
 
-The script will backup the hosts file by default, by appending the Unix Epoch in milliseconds to the file name with the *.bak* extension; backups are stored in the same folder as the new `hosts` file
+The script will backup the hosts file by default, by appending the Unix Epoch in milliseconds to the file name, prepended by the *.bak* extension; backups are stored in the same folder as the new `hosts` file
