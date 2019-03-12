@@ -33,7 +33,7 @@ function _fn_echoverb {
 # Check if the script was run by user root; exit otherwise
 function _fn_check_root {
 	if [ "$EUID" -ne 0 ]
-		then _fn_echoverb 3 "Unable to write file $_HOSTS_FILE\n       Try to run this script as root!"
+		then _fn_echoverb 3 "Unable to write file $_HOSTS_FILE\\n       Try to run this script as root!"
 		exit 1
 	fi
 }
@@ -46,7 +46,7 @@ function _fn_backup {
 		then
 			if [ $_SCRIPT_BACKUP -eq 1 ]
 			then
-				_backup_name="$_HOSTS_FILE.bak-`date +%s%N | cut -b1-13`"
+                _backup_name="$_HOSTS_FILE.bak-$(date +%s%N | cut -b1-13)"
 				cp "$_HOSTS_FILE" "$_backup_name" 2>/dev/null
 				ret=$?
 				if [ $ret -eq 0 ]
