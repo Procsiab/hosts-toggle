@@ -133,7 +133,7 @@ function _fn_main {
 }
 
 # Parse command line arguments
-while [[ "$#" > 0 ]]
+while [ "$#" -gt 0 ]
 do
 	case $1 in
  		-y)
